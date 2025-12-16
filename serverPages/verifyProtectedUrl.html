@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Protected URL Access</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #50e3c2;
+            --background-color: #f4f7f6;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --error-color: #e24a4a;
+            --success-color: #2ecc71;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            background-color: var(--card-background);
+            padding: 40px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            border-top: 5px solid var(--primary-color);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        h1:before {
+            content: '🔑';
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        #short-url {
+            background-color: #f0f4f8;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            font-size: 0.9em;
+            word-break: break-all;
+            color: #555;
+            font-weight: 600;
+            border: 1px solid #e0e6ec;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.95em;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 15px;
+            margin-bottom: 25px;
+            border: 2px solid #ddd;
+            border-radius: var(--border-radius);
+            box-sizing: border-box;
+            font-size: 1em;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(80, 227, 194, 0.3);
+        }
+
+        button[type="submit"] {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            letter-spacing: 0.5px;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #3b73c2;
+        }
+
+        button[type="submit"]:active {
+            transform: translateY(1px);
+        }
+
+        #result {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            min-height: 20px; /* To prevent layout shift */
+        }
+        
+        /* Message styles added by JS */
+        .result-error {
+            background-color: #ffeaea;
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+        }
+
+        .result-success {
+            background-color: #eafff5;
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .result-info {
+            background-color: #f0f4f8;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Protected URL Access</h1>
+        <form id="verifyForm">
+            <p id="short-url">Verifying access...</p>
+            <label for="accessCode">Enter Access Code:</label>
+            <input type="text" id="accessCode" name="accessCode" placeholder="••••••••" required>
+            <button type="submit">Verify Access</button>
+        </form>
+        <div id="result" class="result-info">Enter the code above to proceed.</div>
+    </div>
+
+    <script>
+        const shortUrlDisplay = document.getElementById('short-url');
+        const verifyForm = document.getElementById('verifyForm');
+        const accessCodeInput = document.getElementById('accessCode');
+        const resultDiv = document.getElementById('result');
+
+        // Set the current URL being verified
+        shortUrlDisplay.innerText = `Verifying access for: ${window.location.href.split('?')[0].split('#')[0]}`;
+        resultDiv.className = 'result-info';
+        resultDiv.innerText = 'Enter the code above to proceed.';
+
+        verifyForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const accessCode = accessCodeInput.value.trim();
+            if (!accessCode) return; // Prevent submission if empty
+
+            // Display loading state
+            resultDiv.innerText = 'Verifying... Please wait.';
+            resultDiv.className = 'result-info';
+            verifyForm.querySelector('button').disabled = true;
+
+            try {
+                // Simulate network latency for better UX
+                await new Promise(resolve => setTimeout(resolve, 500)); 
+
+                const response = await fetch(`http://localhost:8000${window.location.pathname}/verify-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    // Send the access code and potentially the URL being accessed
+                    body: JSON.stringify({ 
+                        accessCode: accessCode,
+                        url: window.location.pathname // Only send the path for security/simplicity
+                    })
+                });
+                
+                const result = await response.json();
+                resultDiv.innerText = result.message;
+                
+                if (result.success) {
+
+                    resultDiv.className = 'result-success';
+                    window.location.replace(result.data.redirectUrl); 
+                } else {
+                    resultDiv.className = 'result-error';
+                }
+
+            } catch (error) {
+                console.error('Verification Error:', error);
+                resultDiv.innerText = 'An unexpected error occurred. Please try again.';
+                resultDiv.className = 'result-error';
+            } finally {
+                verifyForm.querySelector('button').disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
