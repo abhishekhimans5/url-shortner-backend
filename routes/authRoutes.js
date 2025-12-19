@@ -12,13 +12,14 @@ authRouter.post('/login', async(req,res) => {
         if(!email || !password || isValidEmail(email) === false){
             error(res, "Invalid email or password", 400);
         }else{
-            login(email, password).then((token) => {
-                onSuccess(res, {token: token}, "Login successful", 200);
+            login(email, password).then((data) => {
+                onSuccess(res, data, "Login successful", 200);
             }).catch((err) => {
                 onError(res, err.message, 401);
             });
         }
     }catch(err){
+        console.log(err.message);
         onError(res, "Login failed", 500);
     }
 
@@ -28,7 +29,7 @@ authRouter.post('/register', async(req,res) => {
     try {
 
         const {email,password,name} = req.body;
-
+console.log(email,password,name);
         if(!email || !password || !name || isValidEmail(email) === false){
             onError(res, "Invalid input data", 400);
         }
@@ -43,14 +44,12 @@ authRouter.post('/register', async(req,res) => {
             });
         }
         
+        
     } catch (err) {
-        console.log(err.message);
-        onSuccess(res, "Registration failed", 500); 
+        onError(res, "Registration failed", 500); 
     }
 
 });
-
-
 
 
 
@@ -59,5 +58,8 @@ const validPassword = (password) => {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     return passwordRegex.test(password);
 }   
+
+
+
 
 export default authRouter;

@@ -19,6 +19,7 @@ urlRoutes.post('/shorten', authMiddleware, async (req, res) => {
         onSuccess(res, result, "URL shortened successfully", 201);  
         
     } catch (error) {
+        console.log()
         onError(res, error.message, 500);
     }
 });

@@ -32,7 +32,7 @@ export const shortenUrl = async (originalUrl, userId) => {
     } 
     catch (error) {
         console.error("Error in shortenUrl:", error);
-        throw error.message;
+        throw error;
     }
 }
 

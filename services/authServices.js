@@ -14,8 +14,17 @@ export const login = async (email, password) => {
 
             if(!isValidPassword){
                 throw new Error('Invalid password');
-            }else{
-                return generateToken({id: user._id, email: user.email});
+            }else if(!user.isActive){
+                throw new Error('User account is inactive');
+            }
+            else{
+                const token =  generateToken({id: user._id, email: user.email});
+                return {
+                    token: token,
+                    email: user.email,
+                    name: user.name,
+                    id: user._id
+                }
             }
 
         }

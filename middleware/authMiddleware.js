@@ -8,10 +8,14 @@ export const authMiddleware = (req, res, next) => {
 
         const token = authHeader.split(' ')[1];
         console.log(decodeToken(token));
-        if (verifyToken(token)) {
-            next();
-        } else {
-            onError(res, 'Unauthorized: Invalid token', 401);
+        try {
+            if (verifyToken(token)) {
+                next();
+            } else {
+                onError(res, 'Unauthorized: Invalid token', 401);
+            }
+        } catch (error) {
+            onError(res, error.message, 401);
         }
     } else {
         onError(res, 'Unauthorized: No token provided', 401);
