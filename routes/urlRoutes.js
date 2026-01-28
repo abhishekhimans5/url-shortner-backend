@@ -9,13 +9,19 @@ const urlRoutes = express.Router();
 
 urlRoutes.post('/shorten', authMiddleware, async (req, res) => {
     try {
-        const { originalUrl, userId } = req.body;
+        const { originalUrl, userId,accessCode,accessType,expiresAt } = req.body;
         const userIdFromToken = decodeToken(req.headers.authorization.split(' ')[1]).id;
 
         if (userId && userId !== userIdFromToken.id) {
             return onError(res, 'Unauthorized: User ID does not match token', 401);
         }
-        const result = await shortenUrl(originalUrl, userIdFromToken);
+        const urlData = {
+            originalUrl,
+            accessCode,
+            accessType,
+            expiresAt
+        }
+        const result = await shortenUrl(urlData, userIdFromToken);
         onSuccess(res, result, "URL shortened successfully", 201);  
         
     } catch (error) {

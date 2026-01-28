@@ -2,10 +2,11 @@ import express from 'express';
 import { onError, onSuccess } from '../middleware/responseFormatter.js';
 import { getUserDetails } from '../services/userServices.js';
 import { decodeToken } from '../services/jwtServises.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const userRoutes = express.Router();
 
-userRoutes.get('/details', async (req, res) => {
+userRoutes.get('/details',authMiddleware, async (req, res) => {
     try {
         // Assuming user ID is passed as a query parameter for simplicity
         //const userId = req.query.id;

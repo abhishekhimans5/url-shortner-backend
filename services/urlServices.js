@@ -1,37 +1,49 @@
 import Url from '../models/urlModel.js';
 import { generateHash } from '../util/generateHash.js';
 
-export const shortenUrl = async (originalUrl, userId) => {
+export const shortenUrl = async (urlData, userId) => {
 
     const prefixUrl = process.env.APP_URL || 'http://localhost:8000/url';
+    console.log(urlData)
+    let {originalUrl,accessType,accessCode,expiresAt} = urlData
     try {
         if(originalUrl.startsWith(prefixUrl)){
             throw new Error('URL is already shortened');
         }
         else if(!originalUrl.startsWith('http://') && !originalUrl.startsWith('https://')){
             throw new Error('Invalid URL format');
+        }else if(accessType === 'protected' && !accessCode){
+            throw new Error('Password needed for protected urls');
         }
+        accessType = accessType === 'protected' ? 'PASSWORD_PROTECTED' : (accessType === 'private' ? 'PRIVATE' : 'PUBLIC')
         const shortUrlId = generateHash(7);
         const shortUrlExists = await Url.findOne({ shortUrlId: shortUrlId });
         if (shortUrlExists) {
             return shortenUrl(originalUrl, userId);
         }
-        const newUrlToInsert = new Url({
+        const newUrlData = {
             longUrl: originalUrl,
-            shortUrlId: shortUrlId,
-            userId: userId
-        });
-        console.log("New URL to insert:", newUrlToInsert);
-        console.log("url : ",prefixUrl + shortUrlId)
-        await newUrlToInsert.save();
-        console.log("URL saved successfully");
+            shortUrlId,
+            userId,
+            accessType: accessType ?? 'PUBLIC',
+            password: accessType === 'PASSWORD_PROTECTED' ? accessCode : undefined
+        };
+
+        if (expiresAt) {
+            newUrlData.expiresAt = new Date(expiresAt);
+        }
+
+        const newUrlToInsert = new Url(newUrlData);
+
+        console.log(newUrlToInsert)
+        const a = await newUrlToInsert.save();
+        console.log(a)
         return {
             shortUrl: prefixUrl + shortUrlId,
             longUrl: originalUrl
         };
     } 
     catch (error) {
-        console.error("Error in shortenUrl:", error);
         throw error;
     }
 }
@@ -52,9 +64,10 @@ export const redirectToLongUrl = async (shortUrlId) => {
             }
         }
     } catch (error) {
-        return error;
+        throw error;
     } 
 }
+
 
 
 export const verifyPasswordForUrl = async(shortUrlId, password) => {

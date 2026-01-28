@@ -13,23 +13,7 @@ const urlAnalyticsSchema = new mongoose.Schema({
     lastAccessed: {
         type: Date,
         default: null
-    },
-    accessHistory: [
-        {
-            accessedAt: {
-                type: Date,
-                default: Date.now
-            },
-            ipAddress: {
-                type: String,
-                required: true
-            },
-            userAgent: {
-                type: String,
-                required: true
-            }
-        }
-    ]
+    }
 });
 const UrlAnalytics = mongoose.model("UrlAnalytics", urlAnalyticsSchema);
 export default UrlAnalytics;

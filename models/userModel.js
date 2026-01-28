@@ -22,6 +22,10 @@ const User = mongoose.model("User",
         isActive: {
             type: Boolean,
             default: true,
+        },
+        isVarified:{
+            type:Boolean,
+            default:false,
         }
     }));
 
