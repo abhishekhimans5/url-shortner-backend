@@ -89,3 +89,28 @@ export const verifyPasswordForUrl = async(shortUrlId, password) => {
         throw error;
     }
 }
+
+export const getAllUrls = async(userId) => {
+    try{
+        if(!userId){
+            throw new Error(`User Id shouldn't be null`);
+        }else{
+
+            const urlList = await Url.find({userId: userId})
+                                .select('urlName longUrl shortUrlId accessType expiresAt')
+                                .sort({createdAt: -1});
+            const prefixUrl = (process.env.APP_URL || 'http://localhost:8000/url')+'/';
+            
+            return urlList.map(url => ({
+                urlName: url.urlName,
+                longUrl: url.longUrl,
+                shortUrl: prefixUrl + url.shortUrlId,
+                accessType: url.accessType,
+                isExpired: url.expiresAt ? (url.expiresAt < new Date()) : false,
+            }));
+        }
+
+    }catch(err){
+        throw err;
+    }
+}

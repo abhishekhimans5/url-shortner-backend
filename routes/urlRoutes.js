@@ -4,6 +4,7 @@ import { shortenUrl, redirectToLongUrl,verifyPasswordForUrl } from '../services/
 import { onError, onSuccess } from '../middleware/responseFormatter.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { decodeToken } from '../services/jwtServises.js';
+import { getAllUrls } from '../services/urlServices.js';
 
 const urlRoutes = express.Router();
 
@@ -59,5 +60,15 @@ urlRoutes.post('/:shortId/verify-password', async(req,res) => {
     }
 });
 
+
+urlRoutes.get('/getAllUrls', authMiddleware, async(req,res) => {
+    try {
+        const userIdFromToken = decodeToken(req.headers.authorization.split(' ')[1]).id;
+        const result = await getAllUrls(userIdFromToken);
+        onSuccess(res, result, "URLs fetched successfully", 200);   
+    } catch (error) {
+        onError(res, error.message, 500);
+    }
+});
 
 export default urlRoutes;
