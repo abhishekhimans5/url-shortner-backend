@@ -10,10 +10,12 @@ const urlAnalyticsSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    lastAccessed: {
-        type: Date,
-        default: null
-    }
+    urlHistoryId : {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'UrlAccessHistory',
+        required: false
+    },
+    
 });
 const UrlAnalytics = mongoose.model("UrlAnalytics", urlAnalyticsSchema);
 export default UrlAnalytics;

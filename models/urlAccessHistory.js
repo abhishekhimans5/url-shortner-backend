@@ -1,4 +1,4 @@
-
+import mongoose from 'mongoose';
 const urlAccessHistorySchema = new mongoose.Schema({
     urlId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -12,11 +12,11 @@ const urlAccessHistorySchema = new mongoose.Schema({
     },
     ipAddress : {
         type:String,
-        required:true
+        required:false
     },
     userAgent : {
         type:String,
-        required:true
+        required:false
     }, 
 });
 

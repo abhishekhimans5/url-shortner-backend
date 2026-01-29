@@ -1,5 +1,8 @@
 import Url from '../models/urlModel.js';
+import UrlAnalytics from '../models/urlAnalytics.js';
+import UrlAccessHistory from '../models/urlAccessHistory.js';
 import { generateHash } from '../util/generateHash.js';
+import mongoose from 'mongoose';
 
 export const shortenUrl = async (urlData, userId) => {
 
@@ -60,6 +63,7 @@ export const redirectToLongUrl = async (shortUrlId) => {
             }else if(urlEntry.accessType === 'PASSWORD_PROTECTED'){
                 return 'password_required';
             }else if(urlEntry.accessType === 'PUBLIC'){
+                updateUrlHistoryAndAnalytics(urlEntry._id, '', '');
                 return urlEntry.longUrl;
             }
         }
@@ -79,7 +83,8 @@ export const verifyPasswordForUrl = async(shortUrlId, password) => {
         else {
             console.log("Verifying password for URL:", shortUrlId);
             if(urlEntry.password === password){
-                console.log("Password verified successfully");  
+                console.log("Password verified successfully");
+                updateUrlHistoryAndAnalytics(urlEntry._id, '', '');
                 return urlEntry.longUrl;
             }else{
                 throw new Error('Incorrect password');
@@ -112,5 +117,72 @@ export const getAllUrls = async(userId) => {
 
     }catch(err){
         throw err;
+    }
+}
+
+
+export const getUrlAnalytics = async(shortUrlId, userId) => {
+    try{
+        if(!userId || !shortUrlId){
+            throw new Error(`User Id and Short URL Id shouldn't be null`);
+        }
+        const urlEntry = await Url.findOne({shortUrlId: shortUrlId, userId: userId});
+        if (!urlEntry) {
+            throw new Error('Short URL not found');
+        }
+        const analyticsData = await UrlAnalytics.findOne({urlId: urlEntry._id});
+        const accessHistory = await UrlAccessHistory.find({urlId: urlEntry._id})
+                                        .select('accessedAt ipAddress userAgent')
+                                        .sort({accessedAt: -1});
+                                        
+        let result = {};
+        if(analyticsData){
+            result = {
+                ...analyticsData.toObject(),
+                accessHistory:accessHistory
+            }
+        }
+        return result || {};
+    }catch(err){
+        throw err;
+    }
+}
+
+
+export const updateUrlHistoryAndAnalytics = async(urlId, ipAddress, userAgent) => {
+    const session = await mongoose.startSession();
+    try{
+        session.startTransaction();
+        await UrlAccessHistory.create(
+                [
+                    {
+                    urlId,
+                    accessedAt: new Date(),
+                    ipAddress,
+                    userAgent
+                    }
+                ],
+                { session }
+                );
+
+        await UrlAnalytics.findOneAndUpdate(
+            {urlId : urlId},
+            {
+                $inc : {
+                    noOfClicks : 1,
+                }
+            },{upsert:true, new:true, session}
+        );
+
+        await session.commitTransaction();
+        console.log("URL history and analytics updated successfully");
+    }catch(err){
+        await session.abortTransaction();
+        console.error("Error updating URL history and analytics:", err);
+        throw err;
+    }
+    finally{
+        session.endSession();
+        console.log("Session ended");
     }
 }
