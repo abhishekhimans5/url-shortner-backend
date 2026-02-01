@@ -1,10 +1,10 @@
+import nodemailer from 'nodemailer';
 
-
-export const emailService = (templateData) => {
+export const sendEmailNotification = async(templateData) => {
 
     const subject = templateData?.subject || 'OTP Verification';
 
-    const template = 
+    const template = templateData?.template ||
         `<!DOCTYPE html>
         <html>
         <head>
@@ -83,7 +83,7 @@ export const emailService = (templateData) => {
                 <h2 style="margin-top:0;">Verify Your Account</h2>
                 <p>Use the following One-Time Password (OTP) to complete your verification. This code is valid for <strong>10 minutes</strong>.</p>
                 
-                <div class="otp-code">123456</div>
+                <div class="otp-code">${templateData?.otp}</div>
                 
                 <p style="font-size: 14px; color: #64748b;">If you didn't request this, please ignore this email or contact support if you have concerns.</p>
             </div>
@@ -95,5 +95,26 @@ export const emailService = (templateData) => {
         </div>
         </body>
         </html>`
+
+
+        try {
+            const transporter = nodemailer.createTransport({
+                service: 'gmail', // or use 'host' and 'port' for custom SMTP
+                auth: {
+                    user: process.env.NODEMAILER_EMAIL,
+                    pass: process.env.NODEMAILER_PASSWORD,
+                },
+            });
+
+            const mailOptions = {
+                from: process.env.NODEMAILER_EMAIL,
+                to: templateData.email,
+                subject: subject,
+                html : template,
+            };
+            await transporter.sendMail(mailOptions);
+        } catch (error) {
+            throw error;
+        }
 
 }

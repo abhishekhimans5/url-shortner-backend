@@ -15,7 +15,7 @@ const urlAccessHistorySchema = new mongoose.Schema({
         required:false
     },
     userAgent : {
-        type:String,
+        type: Object,
         required:false
     }, 
 });

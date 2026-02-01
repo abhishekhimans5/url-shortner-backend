@@ -9,4 +9,5 @@ allRoutes.use('/auth', authRouter);
 allRoutes.use('/url', urlRoutes);
 allRoutes.use('/user', userRoutes);
 
+
 export default allRoutes;

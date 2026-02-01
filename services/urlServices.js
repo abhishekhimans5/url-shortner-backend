@@ -7,8 +7,7 @@ import mongoose from 'mongoose';
 export const shortenUrl = async (urlData, userId) => {
 
     const prefixUrl = process.env.APP_URL || 'http://localhost:8000/url';
-    console.log(urlData)
-    let {originalUrl,accessType,accessCode,expiresAt} = urlData
+    let {originalUrl,accessType,accessCode,expiresAt,urlName} = urlData;
     try {
         if(originalUrl.startsWith(prefixUrl)){
             throw new Error('URL is already shortened');
@@ -25,6 +24,7 @@ export const shortenUrl = async (urlData, userId) => {
             return shortenUrl(originalUrl, userId);
         }
         const newUrlData = {
+            urlName: urlName || '--',
             longUrl: originalUrl,
             shortUrlId,
             userId,
@@ -38,9 +38,7 @@ export const shortenUrl = async (urlData, userId) => {
 
         const newUrlToInsert = new Url(newUrlData);
 
-        console.log(newUrlToInsert)
         const a = await newUrlToInsert.save();
-        console.log(a)
         return {
             shortUrl: prefixUrl + shortUrlId,
             longUrl: originalUrl
@@ -51,7 +49,7 @@ export const shortenUrl = async (urlData, userId) => {
     }
 }
 
-export const redirectToLongUrl = async (shortUrlId) => {
+export const redirectToLongUrl = async (shortUrlId,userAgent) => {
     try {
         const urlEntry = await Url.findOne({ shortUrlId: shortUrlId });
         if (!urlEntry) {
@@ -63,7 +61,7 @@ export const redirectToLongUrl = async (shortUrlId) => {
             }else if(urlEntry.accessType === 'PASSWORD_PROTECTED'){
                 return 'password_required';
             }else if(urlEntry.accessType === 'PUBLIC'){
-                updateUrlHistoryAndAnalytics(urlEntry._id, '', '');
+                updateUrlHistoryAndAnalytics(urlEntry._id, '', userAgent);
                 return urlEntry.longUrl;
             }
         }
@@ -81,9 +79,7 @@ export const verifyPasswordForUrl = async(shortUrlId, password) => {
             throw new Error('Short URL not found'); 
         }
         else {
-            console.log("Verifying password for URL:", shortUrlId);
             if(urlEntry.password === password){
-                console.log("Password verified successfully");
                 updateUrlHistoryAndAnalytics(urlEntry._id, '', '');
                 return urlEntry.longUrl;
             }else{
@@ -95,30 +91,68 @@ export const verifyPasswordForUrl = async(shortUrlId, password) => {
     }
 }
 
-export const getAllUrls = async(userId) => {
-    try{
-        if(!userId){
-            throw new Error(`User Id shouldn't be null`);
-        }else{
 
-            const urlList = await Url.find({userId: userId})
-                                .select('urlName longUrl shortUrlId accessType expiresAt')
-                                .sort({createdAt: -1});
-            const prefixUrl = (process.env.APP_URL || 'http://localhost:8000/url')+'/';
-            
-            return urlList.map(url => ({
-                urlName: url.urlName,
-                longUrl: url.longUrl,
-                shortUrl: prefixUrl + url.shortUrlId,
-                accessType: url.accessType,
-                isExpired: url.expiresAt ? (url.expiresAt < new Date()) : false,
-            }));
+
+export const getAllUrls = async (userId) => {
+  if (!userId) {
+    throw new Error(`User Id shouldn't be null`);
+  }
+
+  const prefixUrl = process.env.APP_URL || 'http://localhost:8000/url/';
+
+  const urls = await Url.aggregate([
+    {
+      $match: {
+        userId: new mongoose.Types.ObjectId(userId) // ✅ required
+      }
+    },
+    {
+      $lookup: {
+        from: 'urlanalytics', // ✅ correct collection
+        localField: '_id',
+        foreignField: 'urlId',
+        as: 'analytics'
+      }
+    },
+    {
+      $addFields: {
+        clickCount: {
+          $ifNull: [
+            { $arrayElemAt: ['$analytics.noOfClicks', 0] },
+            0
+          ]
         }
-
-    }catch(err){
-        throw err;
+      }
+    },
+    {
+      $project: {
+        urlName: 1,
+        longUrl: 1,
+        shortUrlId: 1,
+        accessType: 1,
+        expiresAt: 1,
+        clickCount: 1,
+        createdAt: 1
+      }
+    },
+    {
+      $sort: { createdAt: -1 }
     }
-}
+  ]);
+
+  return urls.map(url => ({
+    urlId: url._id,
+    urlName: url.urlName,
+    longUrl: url.longUrl,
+    shortUrl: `${prefixUrl}${url.shortUrlId}`,
+    accessType: url.accessType,
+    clickCount: url.clickCount,
+    status: url.expiresAt
+      ? url.expiresAt < new Date() ? 'EXPIRED' : 'ACTIVE'
+      : 'ACTIVE'
+  }));
+};
+
 
 
 export const getUrlAnalytics = async(shortUrlId, userId) => {
@@ -126,13 +160,14 @@ export const getUrlAnalytics = async(shortUrlId, userId) => {
         if(!userId || !shortUrlId){
             throw new Error(`User Id and Short URL Id shouldn't be null`);
         }
-        const urlEntry = await Url.findOne({shortUrlId: shortUrlId, userId: userId});
+        const urlEntry = await Url.findOne({_id: shortUrlId, userId: userId});
         if (!urlEntry) {
             throw new Error('Short URL not found');
         }
-        const analyticsData = await UrlAnalytics.findOne({urlId: urlEntry._id});
+        const analyticsData = await UrlAnalytics.findOne({urlId: urlEntry._id})
+                                        .select('noOfClicks urlId -_id');
         const accessHistory = await UrlAccessHistory.find({urlId: urlEntry._id})
-                                        .select('accessedAt ipAddress userAgent')
+                                        .select('accessedAt ipAddress userAgent -_id')
                                         .sort({accessedAt: -1});
                                         
         let result = {};
@@ -156,10 +191,10 @@ export const updateUrlHistoryAndAnalytics = async(urlId, ipAddress, userAgent) =
         await UrlAccessHistory.create(
                 [
                     {
-                    urlId,
-                    accessedAt: new Date(),
-                    ipAddress,
-                    userAgent
+                        urlId,
+                        accessedAt: new Date(),
+                        ipAddress,
+                        userAgent
                     }
                 ],
                 { session }
@@ -175,7 +210,6 @@ export const updateUrlHistoryAndAnalytics = async(urlId, ipAddress, userAgent) =
         );
 
         await session.commitTransaction();
-        console.log("URL history and analytics updated successfully");
     }catch(err){
         await session.abortTransaction();
         console.error("Error updating URL history and analytics:", err);
@@ -183,6 +217,5 @@ export const updateUrlHistoryAndAnalytics = async(urlId, ipAddress, userAgent) =
     }
     finally{
         session.endSession();
-        console.log("Session ended");
     }
 }

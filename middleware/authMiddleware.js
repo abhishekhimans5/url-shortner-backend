@@ -7,7 +7,6 @@ export const authMiddleware = (req, res, next) => {
     if (authHeader) {
 
         const token = authHeader.split(' ')[1];
-        console.log(decodeToken(token));
         try {
             if (verifyToken(token)) {
                 next();

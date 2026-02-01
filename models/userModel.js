@@ -23,7 +23,7 @@ const User = mongoose.model("User",
             type: Boolean,
             default: true,
         },
-        isVarified:{
+        isVerified:{
             type:Boolean,
             default:false,
         }

@@ -19,7 +19,6 @@ authRouter.post('/login', async(req,res) => {
             });
         }
     }catch(err){
-        console.log(err.message);
         onError(res, "Login failed", 500);
     }
 
@@ -29,7 +28,6 @@ authRouter.post('/register', async(req,res) => {
     try {
 
         const {email,password,name} = req.body;
-console.log(email,password,name);
         if(!email || !password || !name || isValidEmail(email) === false){
             onError(res, "Invalid input data", 400);
         }
